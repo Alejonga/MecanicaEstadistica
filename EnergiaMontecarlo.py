@@ -108,3 +108,4 @@ promedio_magnetizaciones = sum(magnetizaciones) / len(magnetizaciones)
 print("Promedio Energia: ", promedio_energias)
 print("Promedio Magnetización: ", promedio_magnetizaciones)
 
+
