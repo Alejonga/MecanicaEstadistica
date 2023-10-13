@@ -1,100 +1,74 @@
 import numpy as np
 import matplotlib.pyplot as plt
- 
-matrizaux = np.zeros((10, 10), dtype=int)
-matriz = matrizaux+1
-n = len(matriz[:, 0])
 
-#Creación spines aleatoreos
-for l in range(n):
-    for m in range(n):
-        matriz[l, m] = matriz[l, m]-2*np.random.randint(0, 2)
+# Función de espines aleatoreos
+def configuracion_inicial(N):   
+    state = 2*np.random.randint(2, size=(N,N))-1
+    return state
 
-#Función de energia
+#Funcion de energia
 def Energia(matriz):
-    suma=0
-    n=len(matriz[:,0])
+    suma = 0
+    n = len(matriz[:, 0])
     for i in range(n):
         for j in range(n):
-            index=matriz[i,j]
-            #hacia arriba
-            if i>0:
-                product1=index*matriz[i-1,j]
-                suma=suma+product1
-            #hacia abajo
-            if i<n-1:
-                product2=index*matriz[i+1,j]
-                suma=suma+product2
-            #hacia izquierda
-            if j>0:
-                product3=index*matriz[i,j-1]
-                suma=suma+product3
-            #hacia derecha
-            if j<n-1:
-                product4=index*matriz[i,j+1]
-                suma=suma+product4
-    return suma / 2
+            index = matriz[i, j]
+            neighbor_sum = matriz[(i + 1) % n, j] + matriz[i, (j + 1) % n] + matriz[(i - 1) % n, j] + matriz[i, (j - 1) % n]
+            suma += -index * neighbor_sum  
+    return suma / 4  
 
-#Función de magnetización
+#Funcion de magnetizacion
 def Magnetizacion(matriz):
-    result=np.sum(matriz)
-    return result
+    mag=np.sum(matriz) / (N * N)
+    return mag
 
-#Paso de Metropolis-Montecarlo
-def Metropolis(matriz, j, temperatura):
-
-    #Escogemos un fila y columna aleatoria
-    faleatorea = np.random.randint(0,n)
-    caleatorea = np.random.randint(0,n)
+#Definimos paso de montecarlo
+def paso_monte_carlo(matriz, temperatura):
+    energia_inicial = 0
+    energia_final = 0
+    s = 0
+    i, j = np.random.randint(0, N, 2)  
+    s = matriz[i, j]  
+    energia_inicial = Energia(matriz)
+    matriz[i, j] = -s  # Invertir el espín
+    energia_final = Energia(matriz)
     
-    #Calculamos energia actual
-    inicial=-j*Energia(matriz)
-    
-    #Invertimos el spin
-    matriz[faleatorea,caleatorea]=-matriz[faleatorea,caleatorea]
-    
-    #Calculamos eneriga final
-    final=-j*Energia(matriz)
-    
-    #Calculamos el delta
-    delta=inicial-final
-    
-    #Criterio de aceptación
-    if delta>0 and np.random.random() > np.exp(-delta / temperatura):
-       matriz[faleatorea,caleatorea]=-matriz[faleatorea,caleatorea]
+    deltaE = energia_final - energia_inicial
+    if deltaE <= 0 or np.random.random() < np.exp(- (0.5 * np.log(1+(2**(0.5))) * deltaE ) / (temperatura)):
+        pass
+    else:
+        matriz[i, j] = s
     return matriz
+#Parametros iniciales
+N=10
+config = configuracion_inicial(N)
+num_pasos = 10000
+magnetizaciones_promedio = []
+start_temp = 0.02
+end_temp = 1.5
+temp_step = 0.02
+rango_temperatura = np.arange(start_temp, end_temp + temp_step, temp_step)
 
+# Realizamos los pasos de Monte Carlo promediando en cada temperatura
+for temperatura in rango_temperatura:
+    configuracion=configuracion_inicial(N)
+    energias = []
+    magnetizaciones = []
 
-#Definición parametros de Montecarlo
-numero_pasos=10000
-energias = []
-magnetizaciones = []
-j= 1
-start = 0
-stop = 100
-step = 0.1
-float_range = np.arange(start, stop, step)
+    for paso in range(num_pasos):
+        paso_monte_carlo(config, temperatura)
+        energia_actual = Energia(config)
+        energias.append(energia_actual)
+        magnetizacion_actual = Magnetizacion(config)
+        magnetizaciones.append(magnetizacion_actual)
 
-#Simulación Temperatura
-for temperatura in float_range:
-
-    #Aplicamos paso de montecarlo
-    arreglo = Metropolis(matriz, j, temperatura)
-
-    #Calculamos energia y magnetización
-    energia = Energia(arreglo)
-    magnetizacion = Magnetizacion(arreglo)
-
-    #Almacenamos resultados
-    energias.append(energia)
-    magnetizaciones.append(magnetizacion) 
+    magnetizaciones_promedio.append(np.mean(magnetizaciones[-4000:]))
 
 # Crear el gráfico
-plt.plot(float_range, magnetizaciones, label='Magnetización')
-plt.xlabel('Beta')
+plt.scatter(rango_temperatura, magnetizaciones_promedio)
+plt.xlabel('T/Tc')
 plt.ylabel('Magnetización')
 plt.title('Magnetización vs Temperatura')
-plt.legend()
 plt.grid(True)
 
 # Mostrar el gráfico
